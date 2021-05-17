@@ -30,6 +30,7 @@ import           Text.Printf         (printf)
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Data -> Data -> Data -> ()
+-- ***DPM   If the redeemer is 42, validation succeeds and we return unit (), as per function def above.
 mkValidator _ r _
     | r == I 42 = ()
     | otherwise = traceError "wrong redeemer"
@@ -46,7 +47,7 @@ scrAddress = ScriptAddress valHash
 type GiftSchema =
     BlockchainActions
         .\/ Endpoint "give" Integer
-        .\/ Endpoint "grab" Integer
+        .\/ Endpoint "grab" Integer     -- the grab endpoint now needs a redeemer value. this is what the integer is for
 
 give :: (HasBlockchainActions s, AsContractError e) => Integer -> Contract w s e ()
 give amount = do
@@ -55,7 +56,7 @@ give amount = do
     void $ awaitTxConfirmed $ txId ledgerTx
     logInfo @String $ printf "made a gift of %d lovelace" amount
 
-grab :: forall w s e. (HasBlockchainActions s, AsContractError e) => Integer -> Contract w s e ()
+grab :: forall w s e. (HasBlockchainActions s, AsContractError e) => Integer -> Contract w s e ()       -- we add Integer input parameter to represent the redeemer.
 grab r = do
     utxos <- utxoAt scrAddress
     let orefs   = fst <$> Map.toList utxos

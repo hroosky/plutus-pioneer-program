@@ -27,12 +27,28 @@ import           Playground.Types    (KnownCurrency (..))
 import           Prelude             (Semigroup (..))
 import           Text.Printf         (printf)
 
+
+
+-- ***********************
+-- On-Chain Validator Code
+-- ***********************
+
+
+-- Boilerplate
+-- ***DPM:  This is called a pragma and it allows for the mkValidator function below to be inlined. Makes it Inlinable.
 {-# INLINABLE mkValidator #-}
+-- ***DPM:  This is the most basic, valid validator we can write. 
 mkValidator :: Data -> Data -> Data -> ()
 mkValidator _ _ _ = ()
 
+-- Boilerplate
+-- ***DPM:  The above validator is just a haskell function. We now need to compile it to Plutus Core script
+--          this uses template haskell. "$$()". It basically gives the ability to inline functions at compile time. Similar to macro systems in other languages
 validator :: Validator
 validator = mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
+
+-- Boilerplate
+-- ***DPM   The next two sections will give us a Plutus Script Address for the validator
 
 valHash :: Ledger.ValidatorHash
 valHash = Scripts.validatorHash validator
@@ -40,6 +56,13 @@ valHash = Scripts.validatorHash validator
 scrAddress :: Ledger.Address
 scrAddress = ScriptAddress valHash
 
+
+
+-- ***********************
+-- Off-Chain Wallet Code
+-- ***********************
+
+-- *** DPM  Allows a user to transfer funds to the script using "give" and consume UTXOs using "grab"
 type GiftSchema =
     BlockchainActions
         .\/ Endpoint "give" Integer
@@ -47,6 +70,7 @@ type GiftSchema =
 
 give :: (HasBlockchainActions s, AsContractError e) => Integer -> Contract w s e ()
 give amount = do
+    -- *** DPM  tx takes valHash which was calculated above, an empty Datum and an Amount which is converted into lovelace
     let tx = mustPayToOtherScript valHash (Datum $ Constr 0 []) $ Ada.lovelaceValueOf amount
     ledgerTx <- submitTx tx
     void $ awaitTxConfirmed $ txId ledgerTx
@@ -64,6 +88,8 @@ grab = do
     void $ awaitTxConfirmed $ txId ledgerTx
     logInfo @String $ "collected gifts"
 
+
+-- Boilerplate
 endpoints :: Contract () GiftSchema Text ()
 endpoints = (give' `select` grab') >> endpoints
   where

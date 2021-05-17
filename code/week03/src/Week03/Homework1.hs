@@ -31,6 +31,7 @@ import           Playground.Types     (KnownCurrency (..))
 import qualified Prelude              as P
 import           Text.Printf          (printf)
 
+-- beneficiary1 can grab beneficiary2's gift up to the deadline. After the deadline, beneficiary2 can grab back the gift.
 data VestingDatum = VestingDatum
     { beneficiary1 :: PubKeyHash
     , beneficiary2 :: PubKeyHash
@@ -40,10 +41,32 @@ data VestingDatum = VestingDatum
 PlutusTx.unstableMakeIsData ''VestingDatum
 
 {-# INLINABLE mkValidator #-}
--- This should validate if either beneficiary1 has signed the transaction and the current slot is before or at the deadline
--- or if beneficiary2 has signed the transaction and the deadline has passed.
+-- This should validate if either 
+    -- beneficiary1 has signed the transaction and the current slot is before or at the deadline
+    -- or 
+    -- beneficiary2 has signed the transaction and the deadline has passed.
 mkValidator :: VestingDatum -> () -> ScriptContext -> Bool
-mkValidator _ _ _ = False -- FIX ME!
+mkValidator dat () ctx =
+    (traceIfFalse "beneficiary1's signature missing"    checkSigBen1  &&
+     traceIfFalse "deadline passed"                     checkDeadlineNotPassed) 
+    ||
+    (traceIfFalse "beneficiary2's signature missing"    checkSigBen2  &&
+     traceIfFalse "deadline not reached"                checkDeadlinePassed)
+  where
+    info :: TxInfo
+    info = scriptContextTxInfo ctx   
+
+    checkSigBen1 :: Bool
+    checkSigBen1 = beneficiary1 dat `elem` txInfoSignatories info
+
+    checkSigBen2 :: Bool
+    checkSigBen2 = beneficiary2 dat `elem` txInfoSignatories info
+
+    checkDeadlineNotPassed :: Bool
+    checkDeadlineNotPassed = to (deadline dat) `contains` txInfoValidRange info  
+
+    checkDeadlinePassed :: Bool
+    checkDeadlinePassed = from (deadline dat) `contains` txInfoValidRange info  
 
 data Vesting
 instance Scripts.ScriptType Vesting where

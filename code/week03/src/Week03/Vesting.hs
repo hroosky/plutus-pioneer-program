@@ -51,7 +51,10 @@ mkValidator dat () ctx =
     checkSig = beneficiary dat `elem` txInfoSignatories info
 
     checkDeadline :: Bool
-    checkDeadline = from (deadline dat) `contains` txInfoValidRange info
+    -- *** DPM  "from" is a helper function in the Interval module. 
+    --          This line reads as: check if the interval (deadline to the end of time) "contains" the interval txInfoValidRange
+    --          When a transaction is submitted, it is never given a specific slot but we know that the transaction has occured within a range - txInfoValidRange
+    checkDeadline = from (deadline dat) `contains` txInfoValidRange info        
 
 data Vesting
 instance Scripts.ScriptType Vesting where

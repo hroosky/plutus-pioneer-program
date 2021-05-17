@@ -35,11 +35,15 @@ mkValidator () r _
     | r == 42   = True
     | otherwise = False
 
+-- *** DPM  Tell the compiler which data types we picked for Datum and Redeemer
+--     This is advanced Haskell. Type level programming
+-- Boilerplate to an extent. Just need to state the data type name and datatype.
 data Typed
 instance Scripts.ScriptType Typed where
     type instance DatumType Typed = ()
     type instance RedeemerType Typed = Integer
 
+-- *** DPM  Now we need to compile
 inst :: Scripts.ScriptInstance Typed
 inst = Scripts.validator @Typed
     $$(PlutusTx.compile [|| mkValidator ||])
