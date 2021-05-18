@@ -14,8 +14,24 @@ import Plutus.Trace.Emulator      as Emulator
 import Wallet.Emulator.Wallet
 
 -- Contract w s e a
+    -- w
+    --     Allows us to write log messages
+
+    -- s
+    --     Describes the blockchain specific actions this contract can perform: Wiaint for slots, submitting transactions...
+
+    -- e
+    --     Describes the type of error message
+
+
 -- EmulatorTrace a
 
+
+-- ***********
+-- Contract 1
+-- ***********
+
+-- Trigger an error
 myContract1 :: Contract () BlockchainActions Text ()
 myContract1 = do
     void $ Contract.throwError "BOOM!"
@@ -27,6 +43,11 @@ myTrace1 = void $ activateContractWallet (Wallet 1) myContract1
 test1 :: IO ()
 test1 = runEmulatorTraceIO myTrace1
 
+-- ***********
+-- Contract 2
+-- ***********
+
+-- Handle an Error
 myContract2 :: Contract () BlockchainActions Void ()
 myContract2 = Contract.handleError
     (\err -> Contract.logError $ "Caught error: " ++ unpack err)
@@ -37,6 +58,12 @@ myTrace2 = void $ activateContractWallet (Wallet 1) myContract2
 
 test2 :: IO ()
 test2 = runEmulatorTraceIO myTrace2
+
+
+
+-- ***********
+-- Contract 3
+-- ***********
 
 type MySchema = BlockchainActions .\/ Endpoint "foo" Int
 
@@ -52,6 +79,12 @@ myTrace3 = do
 
 test3 :: IO ()
 test3 = runEmulatorTraceIO myTrace3
+
+
+
+-- ***********
+-- Contract 4
+-- ***********
 
 myContract4 :: Contract [Int] BlockchainActions Text ()
 myContract4 = do
